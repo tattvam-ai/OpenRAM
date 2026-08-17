@@ -832,6 +832,13 @@ class bank(design):
         top_loc = top_pin.bc()
 
         yoffset = 0.5 * (top_loc.y + bottom_loc.y)
+        # Clamp the trunk below the bottom bbox of the top instance so that
+        # M1 shapes near the instance bottom (e.g. sky130 contact_7 pads in
+        # the replica bitcell array) clear the trunk top edge by >= m1_to_m1.
+        # top_loc.y (BL pin bc()) is much higher than these contacts, so we
+        # use top_inst.by() instead (fixes sky130 m1.2 DRC violations).
+        m1_half = drc["minwidth_m1"] / 2
+        yoffset = min(yoffset, top_inst.by() - m1_half - drc["m1_to_m1"])
         self.add_path(top_pin.layer,
                       [bottom_loc,
                        vector(bottom_loc.x, yoffset),

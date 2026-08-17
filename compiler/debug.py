@@ -62,6 +62,12 @@ def print_raw(str):
     log(str)
 
 
+def print_stderr(msg):
+    """Stderr + compile log, without the [module/func] prefix (e.g. LVS summary)."""
+    print(msg, file=sys.stderr)
+    log(msg)
+
+
 def log(str):
     # Add timestamp at the beginning of the string
     timestr = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")

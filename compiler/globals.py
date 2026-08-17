@@ -444,7 +444,13 @@ def setup_paths():
     # Use a unique temp subdirectory if multithreaded
     if OPTS.num_threads > 1 or OPTS.openram_temp == "/tmp":
         # Make a unique subdir
-        tempdir = "/openram_{0}_{1}_temp".format(getpass.getuser(),
+        try:
+            username = getpass.getuser()
+        except KeyError:
+            # getpass.getuser() raises KeyError when the current uid has no
+            # /etc/passwd entry (e.g. some containerized/sandboxed setups).
+            username = "uid{}".format(os.getuid())
+        tempdir = "/openram_{0}_{1}_temp".format(username,
                                                  os.getpid())
         # Only add the unique subdir one time
         if tempdir not in OPTS.openram_temp:

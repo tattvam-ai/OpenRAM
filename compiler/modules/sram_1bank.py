@@ -15,7 +15,7 @@ from openram.base import design
 from openram.base import verilog
 from openram.base import lef
 from openram.sram_factory import factory
-from openram.tech import spice
+from openram.tech import spice, drc
 from openram import OPTS, print_time
 
 
@@ -1181,6 +1181,12 @@ class sram_1bank(design, verilog, lef):
                     y_bottom = 0
 
                 y_offset = y_bottom - self.data_bus_size[port] + 2 * self.m3_pitch
+                # sky130: the write_driver_array has an M3 supply stripe very close
+                # to the bank bottom.  Push the data-bus channel route down by one
+                # full M3 spacing so the topmost via3 M3 pads clear the bank M3 rail
+                # by >= drc["m3_to_m3"] (fixes m3.2 DRC violations).
+                if OPTS.tech_name == "sky130":
+                    y_offset -= drc["m3_to_m3"]
                 offset = vector(self.control_logic_insts[port].rx() + self.dff.width,
                                 y_offset)
                 cr = channel_route(netlist=route_map,

@@ -22,12 +22,12 @@ class vector():
         """ init function support two init method"""
         # will take single input as a coordinate
         if isinstance(x, (list,tuple,vector)):
-            self.x = float(x[0])
-            self.y = float(x[1])
+            self.x = float(x[0].item() if hasattr(x[0], 'item') else x[0])
+            self.y = float(x[1].item() if hasattr(x[1], 'item') else x[1])
         #will take two inputs as the values of a coordinate
         else:
-            self.x = float(x)
-            self.y = float(y)
+            self.x = float(x.item() if hasattr(x, 'item') else x)
+            self.y = float(y.item() if hasattr(y, 'item') else y)
         self._hash = hash((self.x,self.y))
 
     def __str__(self):
