@@ -99,7 +99,23 @@ sky130-install: $(SRAM_LIB_DIR)
 	@echo "SRAM_LIB_DIR='$(SRAM_LIB_DIR)'"
 	@echo "SKY130_PDK='$(SKY130_PDK)'"
 	@$(MAKE) -B $(INSTALL_DIRS)
+	@$(MAKE) sky130-fix-sp-models
 .PHONY: sky130-install
+
+# sky130_fd_pr__special_pfet_pass is a legacy-name compatibility wrapper for
+# sky130_fd_pr__special_pfet_latch (same device; see the PDK's own comment in
+# sky130_fd_pr__special_pfet_latch.pm3.spice) that ngspice fails to resolve.
+# Rewrite active (non-commented) call sites in the installed sp_lib to the
+# direct, working name. Re-run automatically after every sky130-install,
+# since sp_lib is regenerated fresh each time and would otherwise silently
+# reintroduce the broken wrapper. See technology/sky130/patched_pdk/README.md
+# for the matching fix to the vendored ngspice models themselves.
+sky130-fix-sp-models:
+	@echo "Patching sp_lib: special_pfet_pass -> special_pfet_latch (active lines only)..."
+	@for f in $(INSTALL_BASE)/sp_lib/*.sp; do \
+		[ -f "$$f" ] && sed -i '/^\*/! s/sky130_fd_pr__special_pfet_pass/sky130_fd_pr__special_pfet_latch/g' "$$f"; \
+	done
+.PHONY: sky130-fix-sp-models
 
 sky130-pdk: $(SKY130_PDKS_DIR)
 	@echo "Installing SKY130 via ciel..."
