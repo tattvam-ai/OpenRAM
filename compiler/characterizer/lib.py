@@ -484,7 +484,11 @@ class lib:
         self.lib.write("        bus_type  : addr; \n")
         self.lib.write("        direction  : input; \n")
         self.lib.write("        capacitance : {0};  \n".format(tech.spice["dff_in_cap"]/1000))
-        self.lib.write("        max_transition       : {0};\n".format(self.slews[-1]))
+        # Do not constrain max_transition to self.slews[-1] here: that is just
+        # the largest input slew point in the characterization sweep (e.g.
+        # slew_scales[-1] * tech rise_time), not a real electrical limit --
+        # for sky130 this evaluated to 0.04ns, which is physically unmeetable
+        # by any real driver. Falls back to the library's default_max_transition.
         self.lib.write("        pin(addr{0}[{1}:0])".format(port,self.sram.addr_size-1))
         self.lib.write("{\n")
 
@@ -499,7 +503,7 @@ class lib:
         self.lib.write("        bus_type  : wmask; \n")
         self.lib.write("        direction  : input; \n")
         self.lib.write("        capacitance : {0};  \n".format(tech.spice["dff_in_cap"] / 1000))
-        self.lib.write("        max_transition       : {0};\n".format(self.slews[-1]))
+        # See write_addr_bus() above for why max_transition is not written here.
         self.lib.write("        pin(wmask{0}[{1}:0])".format(port, self.sram.num_wmasks - 1))
         self.lib.write("{\n")
 

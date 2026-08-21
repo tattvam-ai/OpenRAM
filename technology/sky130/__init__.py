@@ -27,7 +27,21 @@ else:
 
 # The ngspice models work with Xyce too now
 spice_model_dir = os.path.join(open_pdks, "ngspice")
-sky130_lib_ngspice = os.path.join(open_pdks, "ngspice", "sky130.lib.spice")
+
+# Prefer a locally patched copy of the PDK's ngspice model tree if present.
+# It exists to work around two ngspice-specific bugs in the vendored
+# sky130A special_{p,n}fet_{latch,pass} narrow-width transistor models used
+# by the SRAM bitcell (a .model card name mismatched against a stray bin
+# suffix, and a legacy special_pfet_pass -> special_pfet_latch compatibility
+# wrapper that ngspice fails to resolve). $PDK_ROOT itself is left untouched;
+# see technology/sky130/patched_pdk/README for details.
+_patched_spice_model_dir = os.path.join(
+    os.path.dirname(__file__), "patched_pdk", "libs.tech", "ngspice"
+)
+if os.path.exists(os.path.join(_patched_spice_model_dir, "sky130.lib.spice")):
+    spice_model_dir = _patched_spice_model_dir
+
+sky130_lib_ngspice = os.path.join(spice_model_dir, "sky130.lib.spice")
 if not os.path.exists(sky130_lib_ngspice):
     raise SystemError("Did not find {} under {}".format(sky130_lib_ngspice, open_pdks))
 os.environ["SPICE_MODEL_DIR"] = spice_model_dir
