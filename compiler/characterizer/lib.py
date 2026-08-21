@@ -363,12 +363,17 @@ class lib:
     def write_bus(self):
         """ Adds format of data and addr bus."""
 
+        # din0/dout0 buses declare bus_type: data (below) with a pin range
+        # that includes spare columns (see write_data_bus_input/_output) --
+        # this shared type must match, or the two are internally
+        # inconsistent within the same liberty file.
+        data_width = self.sram.word_size + self.sram.num_spare_cols
         self.lib.write("\n\n")
         self.lib.write("    type (data){\n")
         self.lib.write("    base_type : array;\n")
         self.lib.write("    data_type : bit;\n")
-        self.lib.write("    bit_width : {0};\n".format(self.sram.word_size))
-        self.lib.write("    bit_from : {0};\n".format(self.sram.word_size - 1))
+        self.lib.write("    bit_width : {0};\n".format(data_width))
+        self.lib.write("    bit_from : {0};\n".format(data_width - 1))
         self.lib.write("    bit_to : 0;\n")
         self.lib.write("    }\n\n")
 
@@ -432,7 +437,12 @@ class lib:
         self.lib.write("        }\n")
 
 
-        self.lib.write("        pin(dout{0}[{1}:0]){{\n".format(read_port,self.sram.word_size-1))
+        # Spare columns (if any) add real pins above word_size-1 (see
+        # base/verilog.py DATA_WIDTH = word_size + num_spare_cols); a LEF
+        # with those pins but a liberty pin(dout[word_size-1:0]) that omits
+        # them is a structural mismatch downstream tools (e.g. LEC) reject.
+        dout_msb = self.sram.word_size + self.sram.num_spare_cols - 1
+        self.lib.write("        pin(dout{0}[{1}:0]){{\n".format(read_port, dout_msb))
         self.lib.write("        timing(){ \n")
         self.lib.write("            timing_sense : non_unate; \n")
         self.lib.write("            related_pin : \"clk{0}\"; \n".format(read_port))
@@ -465,10 +475,42 @@ class lib:
         self.lib.write("            address : addr{0}; \n".format(write_port))
         self.lib.write("            clocked_on  : clk{0}; \n".format(write_port))
         self.lib.write("        }\n")
-        self.lib.write("        pin(din{0}[{1}:0]){{\n".format(write_port,self.sram.word_size-1))
+        # See write_data_bus_output() above for why the spare columns must
+        # be included in the pin range.
+        din_msb = self.sram.word_size + self.sram.num_spare_cols - 1
+        self.lib.write("        pin(din{0}[{1}:0]){{\n".format(write_port, din_msb))
         self.write_FF_setuphold(write_port)
         self.lib.write("        }\n") # pin
         self.lib.write("    }\n") #bus
+
+        self.write_spare_wen_pin(write_port)
+
+    def write_spare_wen_pin(self, write_port):
+        """ Adds the spare_wen control pin(s), if this SRAM has spare
+        columns. Mirrors base/verilog.py's spare_wen port declaration
+        (single pin for one spare column, a bus for more than one) --
+        without this, a LEF that has the pin (added to satisfy sky130's
+        array_col_multiple layout rule) but a liberty file that doesn't is
+        a structural mismatch downstream tools reject. """
+        if self.sram.num_spare_cols == 0:
+            return
+        elif self.sram.num_spare_cols == 1:
+            self.lib.write("    pin(spare_wen{0})".format(write_port))
+            self.lib.write("{\n")
+            self.lib.write("        direction  : input; \n")
+            self.lib.write("        capacitance : {0};  \n".format(tech.spice["dff_in_cap"]/1000))
+            self.write_FF_setuphold(write_port)
+            self.lib.write("    }\n\n")
+        else:
+            self.lib.write("    bus(spare_wen{0}){{\n".format(write_port))
+            self.lib.write("        bus_type  : data; \n")
+            self.lib.write("        direction  : input; \n")
+            self.lib.write("        capacitance : {0};  \n".format(tech.spice["dff_in_cap"]/1000))
+            self.lib.write("        pin(spare_wen{0}[{1}:0])".format(write_port, self.sram.num_spare_cols - 1))
+            self.lib.write("{\n")
+            self.write_FF_setuphold(write_port)
+            self.lib.write("        }\n") # pin
+            self.lib.write("    }\n\n") # bus
 
     def write_data_bus(self, port):
         """ Adds data bus timing results."""
