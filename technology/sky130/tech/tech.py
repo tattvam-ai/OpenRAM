@@ -234,6 +234,11 @@ cell_properties.names["write_driver"] = "sky130_fd_bd_sram__openram_write_driver
 array_row_multiple = 2
 array_col_multiple = 2
 
+# Must match sky130_fd_sc_hd.tlef's DATABASE MICRONS (OpenRAM's own default
+# of 2000 does not) -- a mismatched macro LEF is rejected outright by
+# OpenROAD/OpenDB when loaded alongside the sky130hd tech LEF.
+lef_units = 1000
+
 ###################################################
 # Custom layer properties
 ###################################################

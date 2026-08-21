@@ -21,8 +21,15 @@ class lef:
     This is inherited by the sram_1bank class.
     """
     def __init__(self, layers):
-        # LEF db units per micron
-        self.lef_units = 2000
+        # LEF db units per micron. Technology-overridable (e.g. sky130 uses
+        # 1000 to match sky130_fd_sc_hd.tlef; mismatched DATABASE MICRONS
+        # between a macro LEF and the tech LEF makes OpenROAD/OpenDB reject
+        # the macro's geometry outright).
+        try:
+            from openram.tech import lef_units
+            self.lef_units = lef_units
+        except ImportError:
+            self.lef_units = 2000
         # These are the layers of the obstructions
         self.lef_layers = layers
         # Round to ensure float values are divisible by 0.0025 (the manufacturing grid)
